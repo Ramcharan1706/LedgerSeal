@@ -1,0 +1,42 @@
+@import 'tailwindcss/base';
+@import 'tailwindcss/components';
+@import 'tailwindcss/utilities';
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+@layer base {
+  * {
+    @apply m-0 p-0 box-border;
+  }
+  body {
+    @apply bg-gradient-to-br from-slate-900 via-purple-900/5 to-slate-900 text-white font-[Inter] antialiased min-h-screen;
+  }
+  .dark {
+    @apply bg-slate-900;
+  }
+}
+
+@layer components {
+  .glass-card {
+    @apply bg-white/5 backdrop-blur-xl border border-white/20 rounded-3xl shadow-2xl shadow-black/50 hover:shadow-black/70 hover:-translate-y-1 transition-all duration-500;
+  }
+
+  .btn-primary {
+    @apply inline-flex items-center gap-2 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-700 hover:via-indigo-700 hover:to-purple-700 text-white font-semibold py-3 px-8 rounded-2xl transition-all duration-300 shadow-lg hover:shadow-2xl active:scale-95;
+  }
+
+  .btn-glass {
+    @apply bg-white/10 backdrop-blur-sm border border-white/30 hover:bg-white/20 hover:border-white/50 text-white px-6 py-3 rounded-2xl font-medium transition-all duration-300 hover:shadow-xl;
+  }
+
+  .btn-outline {
+    @apply border-2 border-white/30 bg-transparent hover:bg-white/10 text-white px-6 py-3 rounded-xl font-medium transition-all duration-300;
+  }
+
+  .evidence-status {
+    @apply px-3 py-1 rounded-full text-xs font-medium;
+  }
+
+  .status-verified { @apply bg-emerald-500/20 text-emerald-400 border border-emerald-500/30; }
+  .status-pending { @apply bg-amber-500/20 text-amber-400 border border-amber-500/30; }
+}
