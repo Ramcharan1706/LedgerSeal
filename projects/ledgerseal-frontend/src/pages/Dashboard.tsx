@@ -1,33 +1,13 @@
 import { useWallet } from '@txnlab/use-wallet-react'
-import { ShieldCheckIcon, EyeIcon, ClockIcon } from '@heroicons/react/24/outline'
-import { useState, useEffect } from 'react'
+import { ShieldCheckIcon, EyeIcon, ClockIcon, DocumentTextIcon } from '@heroicons/react/24/outline'
+import { useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { useNavigate } from 'react-router-dom'
+import { evidenceAPI } from '../services/api';
+import { useSnackbar } from 'notistack'
+import { ellipseAddress } from '../utils/ellipseAddress'
 
-const mockEvidence = [
-  {
-    id: '1',
-    fileName: 'contract.pdf',
-    hash: '0x1a2b3c4d5e6f7g8h9i0j1k2l3m4n5o6p7q8r9s0t',
-    timestamp: '2024-01-15T10:30:00Z',
-    owner: '0x742d35Cc66C8D7D5aAbA6F0F5eF8e3aA2b1c0d9e',
-    status: 'verified' as 'verified' | 'pending'
-  },
-  {
-    id: '2',
-    fileName: 'report.docx',
-    hash: '0x9z8y7x6w5v4u3t2s1r0q9p8o7n6m5l4k3j2i1h0g',
-    timestamp: '2024-01-14T14:22:00Z',
-    owner: '0x1234567890abcdef1234567890abcdef12345678',
-    status: 'pending' as 'verified' | 'pending'
-  },
-  {
-    id: '3',
-    fileName: 'evidence.mp4',
-    hash: '0xf1e2d3c4b5a69788796a8b9c0d1e2f3a4b5c6d7e',
-    timestamp: '2024-01-13T09:15:00Z',
-    owner: '0xabcdef1234567890abcdef1234567890abcdef12',
-    status: 'verified' as 'verified' | 'pending'
-  }
-]
+type EvidenceStatus = 'verified' | 'pending'
 
 interface EvidenceItem {
   id: string
@@ -35,69 +15,119 @@ interface EvidenceItem {
   hash: string
   timestamp: string
   owner: string
-  status: 'verified' | 'pending'
+  status: EvidenceStatus
+}
+
+// Mock replaced by API - add GET /api/evidence/list endpoint later
+const mockEvidence: EvidenceItem[] = []; // Load from backend
+
+const formatTimestamp = (iso: string) => {
+  const date = new Date(iso)
+  return date.toLocaleString(undefined, {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
+
+const shorten = (value: string, front = 8, back = 6) => {
+  if (value.length <= front + back) return value
+  return `${value.slice(0, front)}...${value.slice(-back)}`
 }
 
 export default function Dashboard() {
   const { activeAddress } = useWallet()
-  const [evidence, setEvidence] = useState<EvidenceItem[]>([])
+  const { enqueueSnackbar } = useSnackbar()
+  const navigate = useNavigate()
 
-  useEffect(() => {
-    setEvidence(mockEvidence)
-  }, [])
+  const { data: apiEvidence = [], isLoading } = useQuery({
+    queryKey: ['evidence'],
+    queryFn: () => evidenceAPI.list(),
+  });
 
-  const getStatusClass = (status: EvidenceItem['status']) => {
-    return status === 'verified'
-      ? 'status-verified'
-      : 'status-pending bg-amber-500/20 text-amber-400 border-amber-500/30'
-  }
+  const evidence: EvidenceItem[] = (apiEvidence as any[]).map((e: any) => ({
+    id: e.id,
+    fileName: e.metadata?.name || 'Evidence',
+    hash: e.file_hash,
+    timestamp: new Date(e.timestamp * 1000).toISOString(),
+    owner: e.owner,
+    status: 'verified' as EvidenceStatus
+  }));
 
-  const formatTimestamp = (timestamp: string) => {
-    return new Date(timestamp).toLocaleDateString() + ' ' +
-           new Date(timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
+  const handleViewDetails = (item: EvidenceItem) => {
+    enqueueSnackbar(`Opening details for ${item.fileName}`)
+    navigate(`/detail/${item.id}`)
   }
 
   return (
-    <>
-      <div className="text-center mb-16">
-        <h1 className="text-5xl md:text-6xl font-bold bg-gradient-to-r from-blue-400 via-purple-400 to-cyan-400 bg-clip-text text-transparent mb-6">
+    <section className="space-y-8">
+      <header className="text-center">
+        <h1 className="text-4xl md:text-6xl font-bold bg-gradient-to-r from-blue-400 via-purple-400 to-cyan-400 bg-clip-text text-transparent">
           ChainProof Dashboard
         </h1>
-        <p className="text-xl text-white/70 max-w-2xl mx-auto">
-          Verify digital evidence integrity with blockchain-powered hash verification.
-          Your proof is immutable.
+        <p className="mt-3 text-white/70 max-w-3xl mx-auto">
+          Blockchain-based evidence verification for security teams. Track proof, status, and custody from one place.
         </p>
-      </div>
+        <p className="mt-1 text-sm text-white/50">
+          Wallet: {activeAddress ? ellipseAddress(activeAddress, 6) : 'Not connected'}
+        </p>
+      </header>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-        {evidence.map((item) => (
-          <div key={item.id} className="glass-card p-8 hover:-translate-y-2 transition-all duration-500 group">
-            <div className="flex items-start justify-between mb-6">
-              <div className="w-14 h-14 bg-gradient-to-br from-emerald-500/20 to-blue-500/20 rounded-2xl flex items-center justify-center border-2 border-white/20 group-hover:scale-110 transition-all duration-300">
-                <ShieldCheckIcon className="w-7 h-7 text-emerald-400" />
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        {isLoading ? (
+          Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="glass-card p-6 animate-pulse">
+              <div className="h-12 bg-white/10 rounded-lg mb-4"></div>
+              <div className="space-y-3">
+                <div className="h-4 bg-white/10 rounded w-3/4"></div>
+                <div className="h-4 bg-white/10 rounded w-1/2"></div>
+                <div className="h-4 bg-white/10 rounded w-2/3"></div>
               </div>
-              <div className={`evidence-status ${getStatusClass(item.status)}`}>
-                {item.status.toUpperCase()}
-              </div>
+              <div className="h-10 bg-white/10 rounded-lg mt-4 w-full"></div>
             </div>
-
-            <h3 className="text-2xl font-bold mb-3 truncate group-hover:no-underline">
-              {item.fileName}
-            </h3>
-
-            <div className="space-y-4 mb-8">
-              <div className="flex items-center gap-3 text-sm text-white/60">
-                <ClockIcon className="w-4 h-4" />
-                <span>{formatTimestamp(item.timestamp)}</span>
-              </div>
-              <div className="flex items-center gap-3 text-sm text-white/50">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
-                </svg>
-                <span className="font-mono text-xs bg-black/30 px-2 py-1 rounded-lg truncate max-w-[200px]">
-                  {item.hash.slice(0, 16)}...
+          ))
+        ) : evidence.length === 0 ? (
+          <div className="glass-card p-12 text-center col-span-full">
+            <ShieldCheckIcon className="mx-auto h-16 w-16 text-white/40 mb-4" />
+            <h3 className="text-xl font-semibold mb-2">No evidence yet</h3>
+            <p className="text-white/60 mb-6">Upload your first evidence to get started.</p>
+            <a href="/upload" className="btn-primary">Upload Evidence</a>
+          </div>
+        ) : (
+          evidence.map((item) => (
+            <article key={item.id} className="glass-card p-6 border border-white/10 transition-all duration-300 hover:-translate-y-1 hover:border-blue-500/40">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <div className="p-2 rounded-xl bg-gradient-to-br from-blue-500/30 to-purple-500/30">
+                    <DocumentTextIcon className="w-5 h-5 text-cyan-300" />
+                  </div>
+                  <h2 className="text-xl font-semibold truncate">{item.fileName}</h2>
+                </div>
+                <span className={`evidence-status ${item.status === 'verified' ? 'status-verified' : 'status-pending'}`}>
+                  {item.status.toUpperCase()}
                 </span>
               </div>
-              <div className="flex items-center gap-3 text-sm text-white/50">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4
+              <ul className="space-y-2 text-sm text-white/70 mb-5">
+                <li className="flex items-center gap-2">
+                  <ClockIcon className="w-4 h-4" /> {formatTimestamp(item.timestamp)}
+                </li>
+                <li className="flex items-center gap-2">Owner: {ellipseAddress(item.owner, 8)}</li>
+                <li className="flex items-center gap-2">Hash: {shorten(item.hash, 10, 8)}</li>
+              </ul>
+              <button
+                type="button"
+                onClick={() => handleViewDetails(item)}
+                className="btn-primary w-full justify-center"
+              >
+                <EyeIcon className="w-4 h-4" />
+                View Details
+              </button>
+            </article>
+          ))
+        )}
+      </div>
+    </section>
+  )
+}
