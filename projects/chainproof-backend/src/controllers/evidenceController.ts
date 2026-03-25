@@ -23,21 +23,30 @@ export const registerEvidence = [
         return res.status(400).json({ error: 'No file provided' });
       }
 
-      const metadata = req.body.metadata ? JSON.parse(req.body.metadata) : {};
-      const owner = req.body.owner || 'unknown_owner';
+      const txnId = req.body.txnId;
+      const metadataStr = req.body.metadata;
+      const owner = req.body.owner;
 
-      console.log(`Registering evidence: owner=${owner}, filename=${(req.file as any)?.originalname}, size=${fileBuffer.length}`);
+      if (!txnId) {
+        return res.status(400).json({ error: 'txnId required (frontend sends 1 ALGO txn with note `ledgerseal:register:<sha256>`)' });
+      }
+      if (!owner) {
+        return res.status(400).json({ error: 'owner (sender address) required' });
+      }
 
-      const result = await EvidenceService.registerEvidence(fileBuffer, metadata, owner);
-      console.log(`Evidence registered successfully: ${result.evidenceId}`);
+      const metadata = metadataStr ? JSON.parse(metadataStr) : {};
+
+      console.log(`Registering evidence: txnId=${txnId}, owner=${owner}, size=${fileBuffer.length}`);
+
+      const result = await EvidenceService.registerEvidence(txnId, fileBuffer, metadata, owner);
+      console.log(`Evidence verified & registered: ${result.evidenceId}`);
       res.json(result);
     } catch (error) {
       const errorMsg = (error as Error).message;
       console.error('Error in registerEvidence:', errorMsg, error);
-      res.status(400).json({ error: errorMsg || 'Failed to register evidence' });
+      res.status(500).json({ error: errorMsg || 'Failed to register evidence' });
     }
   }
-
 ];
 
 export const listEvidence = async (req: Request, res: Response) => {
@@ -105,9 +114,19 @@ export const getEvidence = async (req: Request, res: Response) => {
 };
 
 export const transferOwnership = async (req: Request, res: Response) => {
-  const { id } = req.params;
-  const { newOwner } = req.body;
-  const result = await TransferService.transferOwnership(id, newOwner);
-  res.json(result);
+  try {
+    const { id } = req.params;
+    const { newOwner } = req.body;
+    const evidence = await EvidenceService.getEvidence(id);
+    if (!evidence) {
+      return res.status(404).json({ error: 'Evidence not found' });
+    }
+    await TransferService.transferOwnership(id, newOwner, evidence.owner);
+    res.json({ message: 'Ownership transferred successfully', newOwner, evidenceId: id });
+  } catch (error) {
+    const errorMsg = (error as Error).message;
+    console.error('Transfer error:', errorMsg);
+    res.status(400).json({ error: errorMsg });
+  }
 };
 

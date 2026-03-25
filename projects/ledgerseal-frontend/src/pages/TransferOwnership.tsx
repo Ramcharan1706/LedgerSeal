@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { evidenceAPI } from '../services/api';
 import { useWallet } from '@txnlab/use-wallet-react';
+import { useAlgoPayment } from '../utils/algoPayment';
 import { useSnackbar } from 'notistack';
 import CopyButton from '../components/CopyButton';
+
 
 export default function TransferOwnership() {
   const [evidenceId, setEvidenceId] = useState('');
@@ -11,23 +13,16 @@ export default function TransferOwnership() {
   const [lastTxn, setLastTxn] = useState<string | null>(null);
   const { enqueueSnackbar } = useSnackbar();
   const { activeAddress } = useWallet();
-
   const handleTransfer = async () => {
     if (!evidenceId.trim() || !newOwner.trim()) {
       enqueueSnackbar('Evidence ID and New Owner wallet are required', { variant: 'warning' });
       return;
     }
 
-    if (!activeAddress) {
-      enqueueSnackbar('Connect your wallet before transferring ownership', { variant: 'warning' });
-      return;
-    }
-
     setLoading(true);
     try {
       const res = await evidenceAPI.transfer(evidenceId.trim(), newOwner.trim());
-      setLastTxn(res.txnId);
-      enqueueSnackbar(`Transfer successful: ${res.txnId}`, { variant: 'success' });
+      enqueueSnackbar(`Transfer successful: ${res.message || 'Ownership updated'}`, { variant: 'success' });
       setEvidenceId('');
       setNewOwner('');
     } catch (error) {
@@ -36,6 +31,7 @@ export default function TransferOwnership() {
       setLoading(false);
     }
   };
+
 
   return (
     <div className="space-y-5 max-w-lg mx-auto">

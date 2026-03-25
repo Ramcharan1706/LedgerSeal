@@ -1,4 +1,6 @@
 import { XMarkIcon, ArrowLeftOnRectangleIcon } from '@heroicons/react/24/outline'
+import Account from './Account'
+
 import { useWallet } from '@txnlab/use-wallet-react'
 import { useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -76,12 +78,12 @@ export default function ConnectWalletModal({ isOpen, onClose }: ConnectWalletMod
 
             {activeAddress ? (
               <div className="space-y-6">
+
                 <div>
                   <p className="text-sm text-white/60 font-medium uppercase tracking-widest mb-3">Connected Wallet</p>
-                  <div className="p-4 bg-gradient-to-br from-blue-500/20 to-purple-500/20 border border-blue-500/30 rounded-xl">
-                    <p className="font-mono text-white break-all">{ellipseAddress(activeAddress, 12)}</p>
-                  </div>
+                  <Account />
                 </div>
+
 
                 <button
                   onClick={handleDisconnect}
