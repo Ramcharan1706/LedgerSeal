@@ -241,18 +241,7 @@ export default function Upload() {
         </div>
       )}
 
-      <div className="space-y-3 mb-8">
-        {txnId && (
-          <a
-            href={getExplorerLink(txnId)}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="block w-full bg-blue-500 text-white px-6 py-3 rounded-lg hover:bg-blue-600 transition-all font-semibold text-center shadow-lg"
-          >
-            🔗 View Payment Transaction on Explorer
-          </a>
-        )}
-      </div>
+     
 
       <button
         onClick={reset}
